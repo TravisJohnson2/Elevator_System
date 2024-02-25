@@ -1,7 +1,10 @@
+`define IDLE    2'b00
+`define UP    	2'b01
+`define DOWN 	2'b10
+
 module elevator(
 	input clk,
 	input reset,
-	input init,
 	input[7:0] in_eb,
 	input[7:0] in_up,
 	input[7:0] in_down,
@@ -22,6 +25,7 @@ module elevator(
 	wire f_down;
 	reg en;
 	reg inc;
+	reg at_floor;
 
 	parameter s0 = 2'b00; //idle
 	parameter s1 = 2'b01; //up
@@ -29,9 +33,10 @@ module elevator(
 	
 	reg[1:0] c_state, n_state; // current and next state
 	
+	
 	elevator_car ec(
 		.clk(clk),
-		.init(init),
+		.reset(reset),
 		.en(en),
 		.inc(inc),
 		.q(q)
@@ -65,66 +70,65 @@ module elevator(
 	);
 	
 	always@(posedge clk)
+	begin
+		if (reset == 1)
 		begin
-			if (reset == 1)
-				begin
-					c_state = 0;
-					n_state = 0;
-				end
-			else
-				c_state = n_state;
+			c_state <= `IDLE;
+			n_state <= `IDLE;
+		end
+		else
+		begin
+			c_state <= n_state;
 				
 			case(c_state)
-				s0: begin
-					clr_eb <= q;
-					if(q_eb > q & f_eb == 1)
-						n_state = s1;
-					else if(eb.out < ec.q & f_eb == 1)
-						n_state = s2;
-					else if(up.out > ec.q & f_up == 1)
-						n_state = s1;
-					else if(up.out < ec.q & f_up == 1)
-						n_state = s2;
-					else if(down.out > ec.q & f_down == 1)
-						if (ec.q < 128)
-							n_state = s1;
-						else
-							n_state = s2;
-					else if(down.out < ec.q & f_down == 1)
-						n_state = s2;
-					end
-				s1: begin
-					en = 1;
-					inc = 1;
+				`IDLE: begin
+					en <= 0;
+					inc <= 0;
+					clr_eb <= q;			// clear current floor from elevator buttons
+					if(q_eb > q && f_eb == 1)	// if elevator button press > current floor, 
+						n_state <= `UP;
+					else if(q_eb < q && f_eb == 1)	// if elevator button press < current floor
+						n_state <= `DOWN;
+					else if(q_up > q && f_up == 1)	// if up button press > current floor
+						n_state <= `UP;
+					else if(q_up < q && f_up == 1)	// if up button press < current floor
+						n_state <= `DOWN;
+					else if(q_down > q && f_down == 1) // if down button > current floor
+						n_state <= `UP;
+					else if(q_down < q & f_down == 1) // if down button < current floor
+						n_state <= `DOWN;
+					else
+						n_state <= `IDLE;
+				end
+				`UP: begin
+					en <= 1;
+					inc <= 1;
 					clr_eb <= q;
 					clr_up <= q;
-					if(eb.out > ec.q & f_eb == 1)
-						n_state = s1;
-					else if (up.out > ec.q & f_up == 1)
-						n_state = s1;
-					else if (down.out > ec.q & f_down == 1)
-						if (ec.q < 128)
-							n_state = s1;
-						else
-							n_state = s2;
+					if(q_eb > q && f_eb == 1)
+						n_state <= `UP;
+					else if (q_up > q && f_up == 1)
+						n_state <= `UP;
+					else if (q_down > q && f_down == 1)
+						n_state <= `UP;
 					else
-						n_state = s0;
-					end
-				s2: begin
-					en = 1;
-					inc = 0; 
+						n_state <= `IDLE;
+				end
+				`DOWN: begin
+					en <= 1;
+					inc <= 0; 
 					clr_eb <= q;
 					clr_down <= q;
-					if(eb.out < ec.q & f_eb == 1)
-						n_state = s2;
-					else if(down.out < ec.q & f_down == 1)
-						n_state = s2;
-					else if(up.out < ec.q & f_up == 1)
-						n_state = s2;
+					if(q_eb < q && f_eb == 1)		// if elevator button < current floor
+						n_state <= `DOWN;
+					else if(q_down < q && f_down == 1)	// if down button < current floor
+						n_state <= `DOWN;
+					else if(q_up < q && f_up == 1)		// if up button < current floor
+						n_state <= `DOWN;
 					else
-						n_state = s0;
-					end
+						n_state <= `UP;
+				end
 			endcase
 		end
-	
+	end
 endmodule
