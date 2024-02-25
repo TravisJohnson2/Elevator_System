@@ -1,7 +1,8 @@
+`timescale 1ns/100ps
+
 module elevator_tb;
 	reg clk;
 	reg reset;
-	reg init;
 	reg[7:0] in_eb;
 	reg[7:0] in_up;
 	reg[7:0] in_down;
@@ -13,7 +14,6 @@ module elevator_tb;
 	elevator uut(
 		.clk(clk),
 		.reset(reset),
-		.init(init),
 		.in_eb(in_eb),
 		.in_up(in_up),
 		.in_down(in_down),
@@ -28,9 +28,7 @@ module elevator_tb;
 		$monitor("time: %t. q_eb: %b. q_up: %b. q_down: %b. q: %b", $time, q_eb, q_up,q_down, q);
 		reset = 1;
 		clk = 0;
-		init = 1;
 		#10 reset = 0;
-		#5 init = 0;
 		#10 in_eb = 255;
 		#10 in_eb = 0;
 		#20 in_up = 255;
@@ -42,7 +40,6 @@ module elevator_tb;
 		#500 in_eb = 32;
 		#10 in_eb = 0;
 	
-		#3000 $finish;
 	end
 	always #5 clk = ~clk;
 endmodule
